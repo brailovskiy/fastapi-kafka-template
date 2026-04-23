@@ -59,7 +59,18 @@ services:
     depends_on:
       - kafka
     command: >
-      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic test-topic --partitions 3 --replication-factor 1
+      /bin/sh -c "
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic test-topic --partitions 3 --replication-factor 1;
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic test-topic-dlq --partitions 1 --replication-factor 1
+      "
+
+  dlq-monitor:
+    image: apache/kafka:4.0.0
+    depends_on:
+      init-kafka:
+        condition: service_completed_successfully
+    command: >
+      /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --topic test-topic-dlq --from-beginning
 
   producer:
     image: apache/kafka:4.0.0
