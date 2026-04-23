@@ -1,4 +1,0 @@
-from anyio import Semaphore
-
-MAX_CONCURRENT_THREADS = 10
-MAX_THREADS_GUARD = Semaphore(MAX_CONCURRENT_THREADS)

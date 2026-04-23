@@ -26,12 +26,6 @@ services:
     logging:
       driver: none
 
-  rabbitmq:
-    image: rabbitmq:4.2.5-management
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-
   postgres-test:
     image: postgres:18.3-alpine
     ports:
@@ -41,6 +35,58 @@ services:
     environment:
       - POSTGRES_INITDB_ARGS=--nosync
 
+  kafka:
+    image: apache/kafka:4.0.0
+    container_name: kafka
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:9093'
+      KAFKA_LISTENERS: 'PLAINTEXT://:9092,CONTROLLER://:9093'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:9092'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    ports:
+      - "9092:9092"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+  init-kafka:
+    image: apache/kafka:4.0.0
+    depends_on:
+      - kafka
+    command: >
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic test-topic --partitions 3 --replication-factor 1
+
+  producer:
+    image: apache/kafka:4.0.0
+    container_name: producer
+    stdin_open: true
+    tty: true
+    depends_on:
+      init-kafka:
+        condition: service_completed_successfully
+    command: >
+      /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server kafka:9092 --topic test-topic
+
+  consumer-1: &consumer
+    image: apache/kafka:4.0.0
+    depends_on:
+      init-kafka:
+        condition: service_completed_successfully
+    command: >
+      /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --topic test-topic --group my-group
+
+  consumer-2:
+    <<: *consumer
+
+  consumer-3:
+    <<: *consumer
 
 volumes:
   postgres_data:
+  kafka_data:
+    driver: local
