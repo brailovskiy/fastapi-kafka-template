@@ -1,0 +1,26 @@
+# Refer for explanation to following link:
+# https://github.com/evilmartians/lefthook/blob/master/docs/full_guide.md
+
+# NOTE: use `lefthook install` when you make change in stages (groups like pre-commit, format, etc.)
+
+pre-commit:
+  commands:
+    format:
+      run: lefthook run format -n
+    lint:
+      run: lefthook run lint -n
+
+format:
+  piped: true
+  parallel: false
+  commands:
+    ruff:
+      run: ruff check --fix
+
+
+lint:
+  parallel: true
+  commands:
+    mypy:
+      glob: "*.py"
+      run: mypy app settings tests --namespace-packages  --show-traceback
